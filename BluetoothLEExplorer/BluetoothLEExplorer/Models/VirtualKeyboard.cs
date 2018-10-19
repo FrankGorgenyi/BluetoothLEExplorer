@@ -109,6 +109,9 @@ namespace BluetoothLEExplorer.Models
         private HashSet<byte> m_currentlyDepressedKeys = new HashSet<byte>();
         private byte[] m_lastSentKeyboardReportValue = new byte[c_sizeOfKeyboardReportDataInBytes];
 
+        public delegate void SubscribedHidClientsChangedHandler(IReadOnlyList<GattSubscribedClient> subscribedClients);
+        public event SubscribedHidClientsChangedHandler SubscribedHidClientsChanged;
+
         private static string GetStringFromBuffer(IBuffer buffer)
         {
             return GetStringFromBuffer(buffer.ToArray());
@@ -245,6 +248,7 @@ namespace BluetoothLEExplorer.Models
                     (provider.AdvertisementStatus == GattServiceProviderAdvertisementStatus.Aborted))
                 {
                     provider.StopAdvertising();
+                    SubscribedHidClientsChanged?.Invoke(null);
                 }
             }
             catch (Exception e)
@@ -282,6 +286,7 @@ namespace BluetoothLEExplorer.Models
         private void HidKeyboardReport_SubscribedClientsChanged(GattLocalCharacteristic sender, object args)
         {
             Debug.WriteLine("Number of clients now registered for keyboard notifications: " + sender.SubscribedClients.Count);
+            SubscribedHidClientsChanged?.Invoke(sender.SubscribedClients);
         }
 
         private void ChangeKeyState(KeyEvent keyEvent, byte hidUsageScanCode)

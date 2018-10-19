@@ -10,7 +10,8 @@
       xmlns:converters="using:Template10.Converters"
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
       xmlns:ggs="using:GattServicesLibrary"
-      xmlns:vm="using:BluetoothLEExplorer.ViewModels" mc:Ignorable="d">
+      xmlns:vm="using:BluetoothLEExplorer.ViewModels" mc:Ignorable="d"
+      xmlns:models="using:BluetoothLEExplorer.Models">
 
     <Page.DataContext>
         <vm:VirtualKeyboardPageViewModel x:Name="ViewModel" />
@@ -37,6 +38,18 @@
             </converters:ValueWhenConverter.Value>
             <converters:ValueWhenConverter.Otherwise>
                 <Visibility>Collapsed</Visibility>
+            </converters:ValueWhenConverter.Otherwise>
+        </converters:ValueWhenConverter>
+        
+        <converters:ValueWhenConverter x:Key="ConnectedWhenTrueConverter">
+            <converters:ValueWhenConverter.When>
+                <x:Boolean>True</x:Boolean>
+            </converters:ValueWhenConverter.When>
+            <converters:ValueWhenConverter.Value>
+                <x:String>Connected</x:String>
+            </converters:ValueWhenConverter.Value>
+            <converters:ValueWhenConverter.Otherwise>
+                <x:String>Disconnected</x:String>
             </converters:ValueWhenConverter.Otherwise>
         </converters:ValueWhenConverter>
     </Page.Resources>
@@ -104,9 +117,44 @@
                                   AllowFocusWhenDisabled="False"
                                   IsTabStop="False" />
                 </StackPanel>
+
+                <TextBlock Visibility="{Binding IsOn, ElementName=VirtualKeyboardSwitch, Converter={StaticResource VisibleWhenTrueConverter}}" TextWrapping="WrapWholeWords">
+                    While this application is in focus, keystrokes from your physical keyboard will be routed to any and all paired 
+                    clients that are connected and subscribed to the HID notifications. You can see those below. Note: certain Android 
+                    devices may require a Bluetooth radio toggle for HID to work again after toggling the above toggle.
+                </TextBlock>
+
                 <TextBlock Visibility="{Binding IsOn, ElementName=VirtualKeyboardSwitch, Converter={StaticResource VisibleWhenTrueConverter}}"
-                           Text="While this application is in focus, keystrokes from your physical keyboard will be routed to any and all paired clients that are connected and subscribed to the HID notifications."
-                           TextWrapping="WrapWholeWords" />
+                            Margin="0,20,0,0"
+                           Text="List of subscribed clients:" />
+
+                <GridView Grid.Row="1" x:Name="DevicesListView" 
+                ItemsSource="{x:Bind ViewModel.SubscribedHidClients, Mode=OneWay}">
+                    <GridView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <ItemsWrapGrid Orientation="Vertical">
+                                <ItemsWrapGrid.ChildrenTransitions>
+                                    <TransitionCollection>
+                                        <AddDeleteThemeTransition/>
+                                        <RepositionThemeTransition/>
+                                        <ReorderThemeTransition/>
+                                    </TransitionCollection>
+                                </ItemsWrapGrid.ChildrenTransitions>
+                            </ItemsWrapGrid>
+                        </ItemsPanelTemplate>
+                    </GridView.ItemsPanel>
+
+                    <GridView.ItemTemplate>
+                        <DataTemplate x:DataType="models:ObservableHidClient" >
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{x:Bind Name, Mode=OneWay}" />
+                                <TextBlock Text=": " Width="20" />
+                                <TextBlock Text="{x:Bind IsConnected, Mode=OneWay, Converter={StaticResource ConnectedWhenTrueConverter}}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </GridView.ItemTemplate>
+                </GridView>
+
             </StackPanel>
         </RelativePanel>
 

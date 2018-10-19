@@ -4,6 +4,7 @@
 //----------------------------------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using BluetoothLEExplorer.Models;
@@ -11,6 +12,7 @@ using Template10.Mvvm;
 using Template10.Services.NavigationService;
 using Windows.UI.Xaml.Navigation;
 using Windows.UI.Core;
+using Windows.Devices.Bluetooth;
 
 namespace BluetoothLEExplorer.ViewModels
 {
@@ -22,6 +24,20 @@ namespace BluetoothLEExplorer.ViewModels
         private bool m_isSettingUp = true;
         private VirtualKeyboard m_virtualKeyboard;
         private bool m_isKeyboardEnabled = false;
+
+        private object m_subscribedHidClientsLock = new object();
+        private ObservableCollection<ObservableHidClient> m_subscribedHidClients = new ObservableCollection<ObservableHidClient>();
+
+        public ObservableCollection<ObservableHidClient> SubscribedHidClients
+        {
+            get
+            {
+                lock (m_subscribedHidClientsLock)
+                {
+                    return m_subscribedHidClients;
+                }
+            }
+        }
 
         /// <summary>
         /// Gets a value indicating whether this host supports peripheral role
@@ -139,6 +155,7 @@ namespace BluetoothLEExplorer.ViewModels
             try
             {
                 m_virtualKeyboard = new VirtualKeyboard();
+                m_virtualKeyboard.SubscribedHidClientsChanged += VirtualKeyboard_SubscribedHidClientsChanged;
                 await m_virtualKeyboard.InitiliazeAsync();
 
                 // Done setting up.
@@ -150,12 +167,22 @@ namespace BluetoothLEExplorer.ViewModels
             }
         }
 
-        /// <summary>
-        /// Initializes <see cref="NavigateToService"/> 
-        /// </summary>
-        public void NavigateToService()
+        private async void VirtualKeyboard_SubscribedHidClientsChanged(IReadOnlyList<Windows.Devices.Bluetooth.GenericAttributeProfile.GattSubscribedClient> subscribedClients)
         {
-            
+            ObservableCollection<ObservableHidClient> currentHidClients = new ObservableCollection<ObservableHidClient>();
+            if (subscribedClients != null)
+            {
+                foreach (var client in subscribedClients)
+                {
+                    currentHidClients.Add(await ObservableHidClient.FromIdAsync(client.Session.DeviceId.Id));
+                }
+            }
+
+            lock (m_subscribedHidClientsLock)
+            {
+                m_subscribedHidClients = currentHidClients;
+            }
+            RaisePropertyChanged("SubscribedHidClients");
         }
 
         /// <summary>
